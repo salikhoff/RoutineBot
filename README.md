@@ -1,2 +1,2 @@
 # RoutineBot
-Routine Bot will sends notifications to help you doing daily routine
+Routine Bot sends notifications to help you doing daily routine
