@@ -29,7 +29,7 @@ namespace RoutineBot.Telegram
                 while (!cancellationToken.IsCancellationRequested)
                 {
                     IEnumerable<Reminder> reminders = await this.remindersQueue.WaitForReminders(cancellationToken);
-                    Task.WaitAll(reminders.Select(r => this.client.SendTextMessageAsync(r.ChatId, r.MessageText, cancellationToken: cancellationToken)).ToArray());
+                    Task.WaitAll(reminders.Select(r => sendReminder(r, cancellationToken)).ToArray());
                 }
             }
             catch (TaskCanceledException ex)
@@ -46,6 +46,18 @@ namespace RoutineBot.Telegram
             finally
             {
                 logger.LogInformation("Stopped sending notifications");
+            }
+        }
+
+        async Task sendReminder(Reminder r, CancellationToken cancellationToken)
+        {
+            try
+            {
+                await this.client.SendTextMessageAsync(r.ChatId, r.MessageText, cancellationToken: cancellationToken);
+            }
+            catch (System.Net.Http.HttpRequestException ex)
+            {
+                logger.LogError(ex.ToString());
             }
         }
     }

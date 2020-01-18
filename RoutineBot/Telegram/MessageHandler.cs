@@ -16,6 +16,8 @@ namespace RoutineBot.Telegram
 {
     public class MessageHandler
     {
+        readonly TimeSpan DefaultDelay = TimeSpan.FromMilliseconds(500);
+        readonly TimeSpan MaxDelay = TimeSpan.FromSeconds(30);
         readonly ITelegramBotClient client;
         readonly ConversationHolder conversationHolder;
         public static ILogger logger = Program.LogFactory.CreateLogger<MessageHandler>();
@@ -32,17 +34,35 @@ namespace RoutineBot.Telegram
             {
                 logger.LogInformation("Start handling messages");
                 int currentOffset = 0;
+                TimeSpan delay = DefaultDelay;
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    Update[] updates = await this.client.GetUpdatesAsync(offset: currentOffset, cancellationToken: cancellationToken);
-                    if (updates != null && updates.Length > 0)
+                    try
                     {
-                        Task.WaitAll(updates.Select((u) => handleUpdateAsync(u, cancellationToken)).ToArray());
-                        currentOffset = updates[updates.Length - 1].Id + 1;
+                        Update[] updates = await this.client.GetUpdatesAsync(offset: currentOffset, cancellationToken: cancellationToken);
+                        if (updates != null && updates.Length > 0)
+                        {
+                            Task.WaitAll(updates.Select((u) => handleUpdateAsync(u, cancellationToken)).ToArray());
+                            currentOffset = updates[updates.Length - 1].Id + 1;
+                            delay = TimeSpan.Zero;
+                        }
+                        else
+                        {
+                            delay = this.DefaultDelay;
+                        }
                     }
-                    else
+                    catch (System.Net.Http.HttpRequestException ex)
                     {
-                        await Task.Delay(500, cancellationToken);
+                        logger.LogError(ex.ToString());
+                        if (delay < this.MaxDelay)
+                        {
+                            delay += this.DefaultDelay;
+
+                        }
+                    }
+                    finally
+                    {
+                        await Task.Delay(delay, cancellationToken);
                     }
                 }
             }
