@@ -13,7 +13,7 @@ namespace RoutineBot
 {
     class Program
     {
-        public static ILoggerFactory LogFactory = LoggerFactory.Create((builder) => builder.AddConsole());
+        public static ILoggerFactory LogFactory = LoggerFactory.Create((builder) => builder.AddConsole().AddFile("Logs/routinebot-{Date}.txt", fileSizeLimitBytes: 100 * 1024 * 1024));
         public static IRemindersRepository RemindersRepository { get; private set; }
         static ILogger logger = LogFactory.CreateLogger<Program>();
         static int Main(string[] args)
