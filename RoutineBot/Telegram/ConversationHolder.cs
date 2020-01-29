@@ -60,6 +60,7 @@ namespace RoutineBot.Telegram
                 long chatId = update.CallbackQuery.Message.Chat.Id;
                 if (update.CallbackQuery.Data == TelegramHelper.HomeCommand)
                 {
+                    await client.AnswerCallbackQueryAsync(update.CallbackQuery.Id);
                     this.resetConversation(chatId);
                     await client.SendDefaultMessageAsync(chatId);
                     return true;
@@ -92,6 +93,7 @@ namespace RoutineBot.Telegram
                     return false;
 
             }
+            await client.AnswerCallbackQueryAsync(update.CallbackQuery.Id);
             IConversation conv = (IConversation)Activator.CreateInstance(t);
             this.storeConversation(chatId, conv);
             await conv.Initialize(client, update);

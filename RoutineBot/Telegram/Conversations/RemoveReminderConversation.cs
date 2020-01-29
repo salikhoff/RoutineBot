@@ -37,6 +37,7 @@ namespace RoutineBot.Telegram.Conversations
                 long reminderId;
                 if (long.TryParse(update.CallbackQuery.Data, out reminderId))
                 {
+                    await client.AnswerCallbackQueryAsync(update.CallbackQuery.Id);
                     long chatId = update.CallbackQuery.Message.Chat.Id;
                     Program.RemindersRepository.RemoveReminder(chatId, reminderId);
                     this.Finished = true;

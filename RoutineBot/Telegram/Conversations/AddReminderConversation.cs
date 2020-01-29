@@ -61,6 +61,7 @@ namespace RoutineBot.Telegram.Conversations
             {
                 if (update.Type == UpdateType.CallbackQuery)
                 {
+                    await client.AnswerCallbackQueryAsync(update.CallbackQuery.Id);
                     if (update.CallbackQuery.Data == SelectDaysDone)
                     {
                         Program.RemindersRepository.StoreReminder(this.reminder);
