@@ -39,6 +39,7 @@ namespace RoutineBot.Telegram.Conversations
                 {
                     await client.AnswerCallbackQueryAsync(update.CallbackQuery.Id);
                     long chatId = update.CallbackQuery.Message.Chat.Id;
+                    await client.EditMessageReplyMarkupAsync(chatId, update.CallbackQuery.Message.MessageId, TelegramHelper.GetHomeButtonKeyboard());
                     Program.RemindersRepository.RemoveReminder(chatId, reminderId);
                     this.Finished = true;
                     await client.SendDefaultMessageAsync(chatId);

@@ -49,7 +49,7 @@ namespace RoutineBot.Telegram.Conversations
                     {
                         this.reminder.DayTime = time;
                         this.state = State.WaitingForWeekDays;
-                        await sendWeekDaysMessage(client, chatId, this.reminder.WeekDays);
+                        await client.SendTextMessageAsync(chatId, "Select reminder week days", replyMarkup: getWeekDaysKeyboard(this.reminder.WeekDays));
                     }
                     else
                     {
@@ -61,24 +61,26 @@ namespace RoutineBot.Telegram.Conversations
             {
                 if (update.Type == UpdateType.CallbackQuery)
                 {
-                    await client.AnswerCallbackQueryAsync(update.CallbackQuery.Id);
                     if (update.CallbackQuery.Data == SelectDaysDone)
                     {
+                        await client.AnswerCallbackQueryAsync(update.CallbackQuery.Id);
+                        await client.EditMessageReplyMarkupAsync(chatId, update.CallbackQuery.Message.MessageId, TelegramHelper.GetHomeButtonKeyboard());
                         Program.RemindersRepository.StoreReminder(this.reminder);
                         this.Finished = true;
                         await client.SendDefaultMessageAsync(chatId);
                     }
-                    else
+                    else if (Enum.TryParse(typeof(WeekDays), update.CallbackQuery.Data, out object parsed))
                     {
-                        WeekDays wdSelected = (WeekDays)Enum.Parse(typeof(WeekDays), update.CallbackQuery.Data);
+                        await client.AnswerCallbackQueryAsync(update.CallbackQuery.Id);
+                        WeekDays wdSelected = (WeekDays)parsed;
                         this.reminder.WeekDays ^= wdSelected;
-                        await sendWeekDaysMessage(client, chatId, this.reminder.WeekDays, update.CallbackQuery.Message.MessageId);
+                        await client.EditMessageReplyMarkupAsync(chatId, update.CallbackQuery.Message.MessageId, getWeekDaysKeyboard(this.reminder.WeekDays));
                     }
                 }
             }
         }
 
-        private async Task sendWeekDaysMessage(ITelegramBotClient client, long chatId, WeekDays wd, int? updateMessageId = null)
+        private InlineKeyboardMarkup getWeekDaysKeyboard(WeekDays wd)
         {
             List<IEnumerable<InlineKeyboardButton>> buttons = new List<IEnumerable<InlineKeyboardButton>>();
 
@@ -96,16 +98,7 @@ namespace RoutineBot.Telegram.Conversations
 
             buttons.Add(TelegramHelper.GetHomeButton());
 
-            string text = "Select reminder week days";
-            InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup(buttons);
-            if (updateMessageId == null)
-            {
-                await client.SendTextMessageAsync(chatId, text, replyMarkup: keyboard);
-            }
-            else
-            {
-                await client.EditMessageTextAsync(chatId, updateMessageId.Value, text, replyMarkup: keyboard);
-            }
+            return new InlineKeyboardMarkup(buttons);
         }
 
         private enum State
