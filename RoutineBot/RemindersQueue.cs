@@ -62,7 +62,7 @@ namespace RoutineBot
                 }
                 await Task.Delay(100);
             }
-            return new Reminder[0];
+            return Enumerable.Empty<Reminder>();
         }
 
         void addReminderEvent(Reminder reminder)
