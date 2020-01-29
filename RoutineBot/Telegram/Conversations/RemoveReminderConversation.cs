@@ -21,7 +21,7 @@ namespace RoutineBot.Telegram.Conversations
             Repository.Model.Chat chat;
             if (Program.RemindersRepository.TryGetChat(chatId, out chat))
             {
-                foreach (Reminder reminder in chat.Reminders)
+                foreach (Reminder reminder in chat.Reminders.OrderBy(r => r.DayTime))
                 {
                     buttons.Add(new List<InlineKeyboardButton>() { new InlineKeyboardButton() { Text = reminder.MessageText, CallbackData = reminder.ReminderId.ToString() } });
                 }

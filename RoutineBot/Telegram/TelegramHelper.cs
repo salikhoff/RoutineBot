@@ -38,7 +38,7 @@ namespace RoutineBot.Telegram
                 if (chat.Reminders.Count > 0)
                 {
                     messageBuilder.AppendLine().AppendLine("Reminders:");
-                    foreach (Reminder reminder in chat.Reminders)
+                    foreach (Reminder reminder in chat.Reminders.OrderBy(r => r.DayTime))
                     {
                         string weekDaysString = string.Join(" | ", Enum.GetValues(typeof(WeekDays)).OfType<WeekDays>().Where(wd => (wd & reminder.WeekDays) > 0));
                         messageBuilder.Append(reminder.MessageText).Append(" (").Append(reminder.DayTime).Append(" ").Append(weekDaysString).Append(")").AppendLine();
