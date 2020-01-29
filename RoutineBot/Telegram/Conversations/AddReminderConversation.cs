@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using RoutineBot.Repository.Model;
+using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
@@ -14,26 +16,27 @@ namespace RoutineBot.Telegram.Conversations
         private Reminder reminder;
         public bool Finished { get; private set; } = false;
 
-        public Message Initialize(long chatId)
+        public async Task Initialize(ITelegramBotClient client, Update update)
         {
+            long chatId = update.GetChatId();
             if (Program.RemindersRepository.ChatExists(chatId))
             {
                 this.reminder = new Reminder();
                 this.reminder.ChatId = chatId;
-                return new Message() { Text = "Enter new reminder name" };
+                await client.SendTextMessageAsync(chatId, "Enter new reminder name");
             }
-            return null;
         }
 
-        public Message ProcessUpdate(Update update)
+        public async Task ProcessUpdate(ITelegramBotClient client, Update update)
         {
+            long chatId = update.GetChatId();
             if (this.state == State.WaitingForMessageText)
             {
                 if (update.Type == UpdateType.Message)
                 {
                     this.reminder.MessageText = update.Message.Text;
                     this.state = State.WaitingForTime;
-                    return new Message() { Text = $"Reminder text:\n{this.reminder.MessageText}\n\nEnter redinder time. Use 24-hour HHmm format." };
+                    await client.SendTextMessageAsync(chatId, $"Reminder text:\n{this.reminder.MessageText}\n\nEnter redinder time. Use 24-hour HHmm format.");
                 }
             }
             else if (this.state == State.WaitingForTime)
@@ -46,11 +49,11 @@ namespace RoutineBot.Telegram.Conversations
                     {
                         this.reminder.DayTime = time;
                         this.state = State.WaitingForWeekDays;
-                        return getWeekDaysMessage(this.reminder.WeekDays);
+                        await sendWeekDaysMessage(client, chatId, this.reminder.WeekDays);
                     }
                     else
                     {
-                        return new Message() { Text = "Could not parse time. Use 24-hour HHmm format." };
+                        await client.SendTextMessageAsync(chatId, "Could not parse time. Use 24-hour HHmm format.");
                     }
                 }
             }
@@ -62,20 +65,19 @@ namespace RoutineBot.Telegram.Conversations
                     {
                         Program.RemindersRepository.StoreReminder(this.reminder);
                         this.Finished = true;
-                        return null;
+                        await client.SendDefaultMessageAsync(chatId);
                     }
                     else
                     {
                         WeekDays wdSelected = (WeekDays)Enum.Parse(typeof(WeekDays), update.CallbackQuery.Data);
                         this.reminder.WeekDays ^= wdSelected;
-                        return getWeekDaysMessage(this.reminder.WeekDays, update.CallbackQuery.Message.MessageId);
+                        await sendWeekDaysMessage(client, chatId, this.reminder.WeekDays, update.CallbackQuery.Message.MessageId);
                     }
                 }
             }
-            return null;
         }
 
-        private Message getWeekDaysMessage(WeekDays wd, int? updateMessageId = null)
+        private async Task sendWeekDaysMessage(ITelegramBotClient client, long chatId, WeekDays wd, int? updateMessageId = null)
         {
             List<IEnumerable<InlineKeyboardButton>> buttons = new List<IEnumerable<InlineKeyboardButton>>();
 
@@ -91,7 +93,16 @@ namespace RoutineBot.Telegram.Conversations
 
             buttons.Add(new List<InlineKeyboardButton>() { new InlineKeyboardButton() { Text = "Done", CallbackData = SelectDaysDone } });
 
-            return new Message() { Text = "Select reminder week days", Keyboard = new InlineKeyboardMarkup(buttons), UpdateMessageId = updateMessageId };
+            string text = "Select reminder week days";
+            InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup(buttons);
+            if (updateMessageId == null)
+            {
+                await client.SendTextMessageAsync(chatId, text, replyMarkup: keyboard);
+            }
+            else
+            {
+                await client.EditMessageTextAsync(chatId, updateMessageId.Value, text, replyMarkup: keyboard);
+            }
         }
 
         private enum State

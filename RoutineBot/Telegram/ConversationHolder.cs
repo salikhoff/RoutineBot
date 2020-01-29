@@ -11,18 +11,71 @@ using Newtonsoft.Json;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Text;
+using Telegram.Bot.Args;
 
 namespace RoutineBot.Telegram
 {
     public class ConversationHolder
     {
-        public static ILogger logger = Program.LogFactory.CreateLogger<MessageHandler>();
+        static ILogger logger = Program.LogFactory.CreateLogger<ConversationHolder>();
 
         Dictionary<long, IConversation> conversations = new Dictionary<long, IConversation>();
         ReaderWriterLockSlim converstaionsLock = new ReaderWriterLockSlim();
 
-        public bool TryCreateConversation(long chatId, string conversationType, out Message message)
+        public async void OnUpdate(object sender, UpdateEventArgs e)
         {
+            try
+            {
+                await this.handleUpdateAsync((ITelegramBotClient)sender, e.Update);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex.ToString());
+            }
+        }
+
+        public void OnError(object sender, ReceiveGeneralErrorEventArgs e)
+        {
+            logger.LogError(e.Exception.ToString());
+        }
+
+        public void OnApiError(object sender, ReceiveErrorEventArgs e)
+        {
+            logger.LogError(e.ApiRequestException.ToString());
+        }
+
+        private async Task handleUpdateAsync(ITelegramBotClient client, Update update)
+        {
+            if (!await tryResetConversation(client, update) && !await tryCreateConversation(client, update) && !await tryContinueConversation(client, update))
+            {
+                await client.SendDefaultMessageAsync(update.GetChatId());
+            }
+
+        }
+
+        private async Task<bool> tryResetConversation(ITelegramBotClient client, Update update)
+        {
+            if (update.Type == UpdateType.CallbackQuery)
+            {
+                long chatId = update.CallbackQuery.Message.Chat.Id;
+                if (update.CallbackQuery.Data == TelegramHelper.HomeCommand)
+                {
+                    this.resetConversation(chatId);
+                    await client.SendDefaultMessageAsync(chatId);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private async Task<bool> tryCreateConversation(ITelegramBotClient client, Update update)
+        {
+            if (update.Type != UpdateType.CallbackQuery)
+            {
+                return false;
+            }
+            long chatId = update.CallbackQuery.Message.Chat.Id;
+            string conversationType = update.CallbackQuery.Data;
             Type t;
             switch (conversationType)
             {
@@ -36,29 +89,29 @@ namespace RoutineBot.Telegram
                     t = typeof(Conversations.RemoveReminderConversation);
                     break;
                 default:
-                    message = null;
                     return false;
 
             }
             IConversation conv = (IConversation)Activator.CreateInstance(t);
             this.storeConversation(chatId, conv);
-            message = conv.Initialize(chatId);
+            await conv.Initialize(client, update);
             return true;
         }
 
-        public Message ProcessMessage(long chatId, Update u)
+        private async Task<bool> tryContinueConversation(ITelegramBotClient client, Update update)
         {
-            Message message = null;
+            long chatId = update.GetChatId();
             IConversation conversation;
             if (tryGetConversation(chatId, out conversation))
             {
-                message = conversation.ProcessUpdate(u);
+                await conversation.ProcessUpdate(client, update);
                 if (conversation.Finished)
                 {
                     this.removeConversation(chatId, conversation);
                 }
+                return true;
             }
-            return message;
+            return false;
         }
 
         void storeConversation(long chatId, IConversation conv)
@@ -84,6 +137,19 @@ namespace RoutineBot.Telegram
                 {
                     this.conversations.Remove(chatId);
                 }
+            }
+            finally
+            {
+                this.converstaionsLock.ExitWriteLock();
+            }
+        }
+
+        void resetConversation(long chatId)
+        {
+            this.converstaionsLock.EnterWriteLock();
+            try
+            {
+                this.conversations.Remove(chatId);
             }
             finally
             {

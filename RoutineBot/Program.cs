@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using RoutineBot.Telegram;
 using Microsoft.Extensions.Configuration;
 using System.Reflection;
+using Telegram.Bot.Types.Enums;
 
 namespace RoutineBot
 {
@@ -18,7 +19,6 @@ namespace RoutineBot
         static ILogger logger = LogFactory.CreateLogger<Program>();
         static int Main(string[] args)
         {
-            ManualResetEvent appEvent = new ManualResetEvent(false);
             try
             {
                 CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
@@ -26,24 +26,24 @@ namespace RoutineBot
                 {
                     logger.LogInformation("Process exit");
                     cancellationTokenSource.Cancel();
-                    appEvent.WaitOne();
                 };
                 IConfiguration configuration = (new ConfigurationBuilder()).AddUserSecrets(Assembly.GetExecutingAssembly()).Build();
                 RemindersRepository = new Repository.DB.ReminderDbRepository();
                 ITelegramBotClient telegramClient = new TelegramBotClient(configuration["token"]);
-                Task[] backgroundTasks = new Task[]{
-                    (new Telegram.MessageHandler(telegramClient)).HandleMessagesAsync(cancellationTokenSource.Token),
-                    (new Telegram.NotificationSender(telegramClient)).SendNotificationsAsync(cancellationTokenSource.Token)
-                };
-                Task.WaitAll(backgroundTasks);
+                ConversationHolder conversationHolder = new ConversationHolder();
+                telegramClient.OnUpdate += conversationHolder.OnUpdate;
+                telegramClient.OnReceiveError += conversationHolder.OnApiError;
+                telegramClient.OnReceiveGeneralError += conversationHolder.OnError;
+                telegramClient.StartReceiving(new UpdateType[] { UpdateType.Message, UpdateType.CallbackQuery }, cancellationTokenSource.Token);
+
+                NotificationSender notificationSender = new NotificationSender(telegramClient);
+                notificationSender.SendNotificationsAsync(cancellationTokenSource.Token);
+                
+                cancellationTokenSource.Token.WaitHandle.WaitOne();
             }
             catch (Exception ex)
             {
                 logger.LogError(ex.ToString());
-            }
-            finally
-            {
-                appEvent.Set();
             }
             return 0;
         }

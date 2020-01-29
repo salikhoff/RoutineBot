@@ -21,7 +21,7 @@ namespace RoutineBot.Telegram
             this.remindersQueue = new RemindersQueue();
         }
 
-        public async Task SendNotificationsAsync(CancellationToken cancellationToken)
+        public async void SendNotificationsAsync(CancellationToken cancellationToken)
         {
             try
             {

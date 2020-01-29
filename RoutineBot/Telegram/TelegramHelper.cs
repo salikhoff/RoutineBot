@@ -10,6 +10,8 @@ using System;
 using System.Globalization;
 using RoutineBot.Repository.Model;
 using System.Linq;
+using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 
 namespace RoutineBot.Telegram
 {
@@ -20,14 +22,14 @@ namespace RoutineBot.Telegram
         public const string RemoveReminderCommand = "RemoveReminder";
         public const string HomeCommand = "Home";
 
-        public static Message GetDefaultMessage(long chatId)
+        public static async Task SendDefaultMessageAsync(this ITelegramBotClient client, long chatId)
         {
             StringBuilder messageBuilder = new StringBuilder();
             messageBuilder.AppendLine("Routine Bot");
 
             List<IEnumerable<InlineKeyboardButton>> buttons = new List<IEnumerable<InlineKeyboardButton>>();
 
-            Chat chat;
+            Repository.Model.Chat chat;
             if (Program.RemindersRepository.TryGetChat(chatId, out chat))
             {
                 InlineKeyboardButton addReminderButton = new InlineKeyboardButton() { Text = "Add reminder", CallbackData = AddReminderCommand };
@@ -60,9 +62,26 @@ namespace RoutineBot.Telegram
             InlineKeyboardButton timeZoneButton = new InlineKeyboardButton() { Text = "Set timezone", CallbackData = SetTimeZoneCommand };
             buttons.Add(new List<InlineKeyboardButton>() { timeZoneButton });
 
+            await client.SendTextMessageAsync(chatId, messageBuilder.ToString(), replyMarkup: new InlineKeyboardMarkup(buttons));
 
-            return new Message() { Text = messageBuilder.ToString(), Keyboard = new InlineKeyboardMarkup(buttons) };
+        }
 
+        public static long GetChatId(this Update update)
+        {
+            long chatId;
+            if (update.Type == UpdateType.CallbackQuery)
+            {
+                chatId = update.CallbackQuery.Message.Chat.Id;
+            }
+            else if (update.Type == UpdateType.Message)
+            {
+                chatId = update.Message.Chat.Id;
+            }
+            else
+            {
+                throw new Exception("Unsupported update type");
+            }
+            return chatId;
         }
 
         public static bool TryParseTime(string text, out TimeSpan t)

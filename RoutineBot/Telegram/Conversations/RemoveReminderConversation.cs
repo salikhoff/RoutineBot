@@ -5,6 +5,8 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 using Telegram.Bot.Types.Enums;
 using System.Linq;
+using System.Threading.Tasks;
+using Telegram.Bot;
 
 namespace RoutineBot.Telegram.Conversations
 {
@@ -12,8 +14,9 @@ namespace RoutineBot.Telegram.Conversations
     {
         public bool Finished { get; private set; } = true;
 
-        public Message Initialize(long chatId)
+        public async Task Initialize(ITelegramBotClient client, Update update)
         {
+            long chatId = update.GetChatId();
             List<IEnumerable<InlineKeyboardButton>> buttons = new List<IEnumerable<InlineKeyboardButton>>();
             Repository.Model.Chat chat;
             if (Program.RemindersRepository.TryGetChat(chatId, out chat))
@@ -24,21 +27,22 @@ namespace RoutineBot.Telegram.Conversations
                 }
             }
             buttons.Add(new List<InlineKeyboardButton>() { new InlineKeyboardButton() { Text = "Back", CallbackData = TelegramHelper.HomeCommand } });
-            return new Message() { Text = "Select reminder to remove", Keyboard = new InlineKeyboardMarkup(buttons) };
+            await client.SendTextMessageAsync(chatId, "Select reminder to remove", replyMarkup: new InlineKeyboardMarkup(buttons));
         }
 
-        public Message ProcessUpdate(Update update)
+        public async Task ProcessUpdate(ITelegramBotClient client, Update update)
         {
             if (update.Type == UpdateType.CallbackQuery)
             {
                 long reminderId;
                 if (long.TryParse(update.CallbackQuery.Data, out reminderId))
                 {
-                    Program.RemindersRepository.RemoveReminder(update.CallbackQuery.Message.Chat.Id, reminderId);
+                    long chatId = update.CallbackQuery.Message.Chat.Id;
+                    Program.RemindersRepository.RemoveReminder(chatId, reminderId);
                     this.Finished = true;
+                    await client.SendDefaultMessageAsync(chatId);
                 }
             }
-            return null;
         }
     }
 }

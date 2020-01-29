@@ -9,8 +9,8 @@ namespace RoutineBot.Telegram
 {
     public interface IConversation
     {
-        Message Initialize(long chatId);
-        Message ProcessUpdate(Update update);
+        Task Initialize(ITelegramBotClient client, Update update);
+        Task ProcessUpdate(ITelegramBotClient client, Update update);
         bool Finished { get; }
     }
 }

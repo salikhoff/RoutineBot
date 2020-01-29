@@ -2,6 +2,8 @@ using System;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 using Telegram.Bot.Types.Enums;
+using System.Threading.Tasks;
+using Telegram.Bot;
 
 namespace RoutineBot.Telegram.Conversations
 {
@@ -9,13 +11,13 @@ namespace RoutineBot.Telegram.Conversations
     {
         public bool Finished { get; private set; } = false;
 
-        public Message Initialize(long chatId)
+        public async Task Initialize(ITelegramBotClient client, Update update)
         {
             InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup(new InlineKeyboardButton() { Text = "Back", CallbackData = TelegramHelper.HomeCommand });
-            return new Message() { Text = "Enter your current local time to detect your timezone. Use 24-hour HHmm format.", Keyboard = keyboard };
+            await client.SendTextMessageAsync(update.GetChatId(), "Enter your current local time to detect your timezone. Use 24-hour HHmm format.", replyMarkup: keyboard);
         }
 
-        public Message ProcessUpdate(Update update)
+        public async Task ProcessUpdate(ITelegramBotClient client, Update update)
         {
             if (update.Type == UpdateType.Message)
             {
@@ -23,19 +25,19 @@ namespace RoutineBot.Telegram.Conversations
                 TimeSpan time;
                 if (TelegramHelper.TryParseTime(timeText, out time))
                 {
+                    long chatId = update.Message.Chat.Id;
                     int minutes = Convert.ToInt32((time - update.Message.Date.TimeOfDay).TotalMinutes / 15) * 15;
                     minutes = minutes > 720 ? minutes - 1440 : minutes < -720 ? minutes + 1440 : minutes;
                     TimeSpan timeZone = TimeSpan.FromMinutes(minutes);
-                    Program.RemindersRepository.SetTimeZone(update.Message.Chat.Id, timeZone);
+                    Program.RemindersRepository.SetTimeZone(chatId, timeZone);
                     this.Finished = true;
-                    return null;
+                    await client.SendDefaultMessageAsync(chatId);
                 }
                 else
                 {
-                    return new Message() { Text = "Could not parse time. Use 24-hour HHmm format." };
+                    await client.SendTextMessageAsync(update.GetChatId(), "Could not parse time. Use 24-hour HHmm format.");
                 }
             }
-            return null;
         }
     }
 }
