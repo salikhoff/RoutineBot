@@ -13,8 +13,9 @@ namespace RoutineBot.Telegram.Conversations
 
         public async Task Initialize(ITelegramBotClient client, Update update)
         {
-            InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup(new InlineKeyboardButton() { Text = "Back", CallbackData = TelegramHelper.HomeCommand });
-            await client.SendTextMessageAsync(update.GetChatId(), "Enter your current local time to detect your timezone. Use 24-hour HHmm format.", replyMarkup: keyboard);
+            await client.SendTextMessageAsync(update.GetChatId(),
+                "Enter your current local time to detect your timezone. Use 24-hour HHmm format.",
+                replyMarkup: TelegramHelper.GetHomeButtonKeyboard());
         }
 
         public async Task ProcessUpdate(ITelegramBotClient client, Update update)

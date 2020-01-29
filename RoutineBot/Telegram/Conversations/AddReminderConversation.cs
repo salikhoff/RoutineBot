@@ -23,7 +23,7 @@ namespace RoutineBot.Telegram.Conversations
             {
                 this.reminder = new Reminder();
                 this.reminder.ChatId = chatId;
-                await client.SendTextMessageAsync(chatId, "Enter new reminder name");
+                await client.SendTextMessageAsync(chatId, "Enter new reminder name", replyMarkup: TelegramHelper.GetHomeButtonKeyboard());
             }
         }
 
@@ -36,7 +36,7 @@ namespace RoutineBot.Telegram.Conversations
                 {
                     this.reminder.MessageText = update.Message.Text;
                     this.state = State.WaitingForTime;
-                    await client.SendTextMessageAsync(chatId, $"Reminder text:\n{this.reminder.MessageText}\n\nEnter redinder time. Use 24-hour HHmm format.");
+                    await client.SendTextMessageAsync(chatId, $"Reminder text:\n{this.reminder.MessageText}\n\nEnter redinder time. Use 24-hour HHmm format.", replyMarkup: TelegramHelper.GetHomeButtonKeyboard());
                 }
             }
             else if (this.state == State.WaitingForTime)
@@ -53,7 +53,7 @@ namespace RoutineBot.Telegram.Conversations
                     }
                     else
                     {
-                        await client.SendTextMessageAsync(chatId, "Could not parse time. Use 24-hour HHmm format.");
+                        await client.SendTextMessageAsync(chatId, "Could not parse time. Use 24-hour HHmm format.", replyMarkup: TelegramHelper.GetHomeButtonKeyboard());
                     }
                 }
             }
@@ -92,6 +92,8 @@ namespace RoutineBot.Telegram.Conversations
             buttons.Add(daysButtonsRow);
 
             buttons.Add(new List<InlineKeyboardButton>() { new InlineKeyboardButton() { Text = "Done", CallbackData = SelectDaysDone } });
+
+            buttons.Add(TelegramHelper.GetHomeButton());
 
             string text = "Select reminder week days";
             InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup(buttons);

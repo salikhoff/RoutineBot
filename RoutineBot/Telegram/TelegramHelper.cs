@@ -98,6 +98,16 @@ namespace RoutineBot.Telegram
             t = TimeSpan.Zero;
             return false;
         }
+
+        public static IEnumerable<InlineKeyboardButton> GetHomeButton()
+        {
+            yield return new InlineKeyboardButton() { Text = "🏠", CallbackData = TelegramHelper.HomeCommand };
+        }
+
+        public static InlineKeyboardMarkup GetHomeButtonKeyboard()
+        {
+            return new InlineKeyboardMarkup(new List<IEnumerable<InlineKeyboardButton>>() { GetHomeButton() });
+        }
     }
 
 }

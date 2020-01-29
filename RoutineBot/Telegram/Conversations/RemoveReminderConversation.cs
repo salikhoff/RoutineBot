@@ -26,7 +26,7 @@ namespace RoutineBot.Telegram.Conversations
                     buttons.Add(new List<InlineKeyboardButton>() { new InlineKeyboardButton() { Text = reminder.MessageText, CallbackData = reminder.ReminderId.ToString() } });
                 }
             }
-            buttons.Add(new List<InlineKeyboardButton>() { new InlineKeyboardButton() { Text = "Back", CallbackData = TelegramHelper.HomeCommand } });
+            buttons.Add(TelegramHelper.GetHomeButton());
             await client.SendTextMessageAsync(chatId, "Select reminder to remove", replyMarkup: new InlineKeyboardMarkup(buttons));
         }
 
