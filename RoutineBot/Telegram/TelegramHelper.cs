@@ -41,7 +41,7 @@ namespace RoutineBot.Telegram
                     foreach (Reminder reminder in chat.Reminders.OrderBy(r => r.DayTime))
                     {
                         string weekDaysString = string.Join(" | ", Enum.GetValues(typeof(WeekDays)).OfType<WeekDays>().Where(wd => (wd & reminder.WeekDays) > 0));
-                        messageBuilder.Append(reminder.MessageText).Append(" (").Append(reminder.DayTime).Append(" ").Append(weekDaysString).Append(")").AppendLine();
+                        messageBuilder.Append(reminder.MessageText).Append(" (").Append(reminder.DayTime.ToString("hh\\:mm")).Append(" ").Append(weekDaysString).Append(")").AppendLine();
                     }
 
                     InlineKeyboardButton removeReminderButton = new InlineKeyboardButton() { Text = "Remove reminder", CallbackData = RemoveReminderCommand };
@@ -52,7 +52,7 @@ namespace RoutineBot.Telegram
                     messageBuilder.AppendLine().AppendLine("No reminders");
                 }
 
-                messageBuilder.AppendLine().Append("Your timezone is: ").Append(chat.TimeZone < TimeSpan.Zero ? "-" : "+").Append(Math.Abs(chat.TimeZone.Hours)).Append(':').AppendLine(Math.Abs(chat.TimeZone.Minutes).ToString("00"));
+                messageBuilder.AppendLine().Append("Your timezone is: ").Append(chat.TimeZone < TimeSpan.Zero ? "-" : "+").AppendLine(chat.TimeZone.ToString("hh\\:mm"));
             }
             else
             {
